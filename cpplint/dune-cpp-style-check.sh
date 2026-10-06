@@ -2,7 +2,7 @@
 
 HERE=$(cd $(dirname $(readlink -f ${BASH_SOURCE})) && pwd)
 
-if [[ "$#" < "2" ]]; then
+if [[ "$#" != "2" ]]; then
 
 cat<<EOF >&2
 
@@ -73,7 +73,6 @@ fi
 
 
 filename=$2
-exclude_regex=$3
 
 files=""
 
@@ -97,10 +96,6 @@ files=$( echo $files | tr " " "\n" | sort | tr "\n" " " )
 DIR="$(dirname "$(readlink -f "$0")")"
 
 for file in $files ; do
-
-     if [[ $file =~ ${exclude_regex} ]]; then
- 	continue
-     fi
 
      $DIR/dunecpplint.sh $file
 
