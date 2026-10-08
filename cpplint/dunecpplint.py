@@ -5925,10 +5925,10 @@ def CheckItemIndentationInNamespace(filename, raw_lines_no_comments, linenum,
 
 def CheckForCStyleComments(filename, lines, error):
   for i_l in range(len(lines)):
-    if Search(r'^/\*[^\*]', lines[i_l]) or Search(r'\s+/\*[^\*]', lines[i_l]):
+    if (Search(r'^/\*[^\*]', lines[i_l]) or Search(r'\s+/\*[^\*]', lines[i_l])) and Search(r'\*/', lines[i_l]):
       if not Search(r'.*/\*.*\*/\s*[\),]', lines[i_l]):
         error(filename, i_l, 'readability/comment', 3,
-              'C-style comment syntax detected; please use either C++ style "//" or Doxygen style. Multi-line comments should start with the C-style syntax on a line by itself')
+              'Single-line C-style comment syntax detected; please use either C++ style "//" or Doxygen style.')
 
 def ProcessLine(filename, file_extension, clean_lines, line,
                 include_state, function_state, nesting_state, error,

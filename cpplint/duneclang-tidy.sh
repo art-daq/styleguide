@@ -267,7 +267,7 @@ fi
 function is_file_excluded() {
     path_to_check=$1
     filename=$2
-    if [[ "$path_to_check" == "/" ]]; then
+    if [[ "$path_to_check" == "/" || "$path_to_check" == "." ]]; then
         return 0
     fi
 
