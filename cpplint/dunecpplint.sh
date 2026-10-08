@@ -100,6 +100,10 @@ for header_file in $header_files; do
         #echo "Skipping excluded header file: $header_file"
         continue
     fi
+    if [ -L $header_file ]; then
+        #echo "Skipping symlink header file: $header_file"
+        continue
+    fi
     $( dirname $0 )/dunecpplint.py --quiet --extensions=h,hpp,hh,cc,cpp,cxx --headers=hh,hpp,h --filter=${header_filters}${dev_filters} $header_file
 
 done
@@ -108,6 +112,10 @@ for source_file in $source_files; do
     is_file_excluded $(dirname $source_file) $source_file
     if [ $? -eq 1 ]; then
         #echo "Skipping excluded source file: $source_file"
+        continue
+    fi
+    if [ -L $source_file ]; then
+        #echo "Skipping symlink source file: $source_file"
         continue
     fi
     $( dirname $0 )/dunecpplint.py --quiet --extensions=h,hpp,hh,cc,cpp,cxx --headers=hh,hpp,h --filter=${source_filters}${dev_filters} $source_file

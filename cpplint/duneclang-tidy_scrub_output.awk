@@ -90,6 +90,10 @@ BEGIN {
 	next
     }
 
+    if ($0 ~ /TRACE_NAME/) {
+        next
+    }
+
     if ($0 ~ /xpanded from here[[:space:]~:]*\/cvmfs/) {
 	next
     }
