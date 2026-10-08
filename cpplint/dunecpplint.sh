@@ -58,13 +58,13 @@ header_files=""
 source_files=""
 
 if [[ -d $filename ]]; then
-    header_files=$( find $filename -name "*.hh" )
-    source_files=$( find $filename -name "*.cc" )" "$( find $filename -name "*.cpp" )
+    header_files=$( find $filename -name "*.hh" )" "$( find $filename -name "*.h" )" "$( find $filename -name "*.hpp" )
+    source_files=$( find $filename -name "*.cc" )" "$( find $filename -name "*.cpp" )" "$( find $filename -name "*.cxx" )
 elif [[ -f $filename ]]; then
 
-    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ ]]; then
+    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ || "$filename" =~ ^.*cxx$ ]]; then
 	source_files=$filename
-    elif [[ "$filename" =~ ^.*hh$ ]]; then
+    elif [[ "$filename" =~ ^.*hh$ || "$filename" =~ ^.*h$ || "$filename" =~ ^.*hpp$ ]]; then
 	header_files=$filename
     else
 	echo "Filename $(basename $filename) has unknown extension; exiting..." >&2
@@ -76,14 +76,41 @@ else
     exit 2
 fi
 
-for header_file in $header_files; do
+function is_file_excluded() {
+    path_to_check=$1
+    filename=$2
+    if [[ "$path_to_check" == "/" ]]; then
+        return 0
+    fi
 
-    $( dirname $0 )/dunecpplint.py --quiet --extensions=hh,cc,cpp --headers=hh --filter=${header_filters}${dev_filters} $header_file
+    if [[ -f $path_to_check/.clang_tidy_exclude ]]; then
+        relpath=$(realpath --relative-to=$path_to_check $filename)
+        if grep -q "^$relpath$" $path_to_check/.clang_tidy_exclude; then
+            return 1
+        fi
+        return 0
+    else
+        is_file_excluded $(dirname $path_to_check) $filename
+        return $?
+    fi
+}
+
+for header_file in $header_files; do
+    is_file_excluded $(dirname $header_file) $header_file
+    if [ $? -eq 1 ]; then
+        #echo "Skipping excluded header file: $header_file"
+        continue
+    fi
+    $( dirname $0 )/dunecpplint.py --quiet --extensions=h,hpp,hh,cc,cpp,cxx --headers=hh,hpp,h --filter=${header_filters}${dev_filters} $header_file
 
 done
 
 for source_file in $source_files; do
-
-    $( dirname $0 )/dunecpplint.py --quiet --extensions=hh,cc,cpp --headers=hh --filter=${source_filters}${dev_filters} $source_file
+    is_file_excluded $(dirname $source_file) $source_file
+    if [ $? -eq 1 ]; then
+        #echo "Skipping excluded source file: $source_file"
+        continue
+    fi
+    $( dirname $0 )/dunecpplint.py --quiet --extensions=h,hpp,hh,cc,cpp,cxx --headers=hh,hpp,h --filter=${source_filters}${dev_filters} $source_file
 
 done

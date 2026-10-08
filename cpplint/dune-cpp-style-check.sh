@@ -6,7 +6,7 @@ if [[ "$#" != "2" ]]; then
 
 cat<<EOF >&2
 
-    Usage: $(basename $0) <directory containing the compile_commands.json file for your build> <file or directory to examine> <exclude regex>
+    Usage: $(basename $0) <directory containing the compile_commands.json file for your build> <file or directory to examine>
 
 Given a file, it will apply two linters to that file:
 
@@ -77,10 +77,10 @@ filename=$2
 files=""
 
 if [[ -d $filename ]]; then
-    files=$( find $filename -name "*.cc" )" "$( find $filename -name "*.cpp" )" "$( find $filename -name "*.hh" )
+    files=$( find $filename -name "*.cc" )" "$( find $filename -name "*.cpp" )" "$( find $filename -name "*.hh" )" "$( find $filename -name "*.h" )
 elif [[ -f $filename ]]; then
 
-    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ || "$filename" =~ ^.*hh$ ]]; then
+    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ || "$filename" =~ ^.*hh$ || "$filename" =~ ^.*h$ ]]; then
 	files=$filename
     else
 	echo "Filename $(basename $filename) has unknown extension; exiting..." >&2

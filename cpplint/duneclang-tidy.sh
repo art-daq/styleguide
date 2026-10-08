@@ -70,12 +70,12 @@ filename=$2
 source_files=""
 
 if [[ -d $filename ]]; then
-    source_files=$( find $filename -name "*.cxx" )" "$( find $filename -name "*.cpp" )
+    source_files=$( find $filename -name "*.cxx" )" "$( find $filename -name "*.cpp" )" "$( find $filename -name "*.cc" )
 elif [[ -f $filename ]]; then
 
-    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ ]]; then
+    if [[ "$filename" =~ ^.*cc$ || "$filename" =~ ^.*cpp$ || "$filename" =~ ^.*cxx$ ]]; then
 	source_files=$filename
-    elif [[ "$filename" =~ ^.*hh$ ]]; then
+    elif [[ "$filename" =~ ^.*hh$ || "$filename" =~ ^.*h$ ]]; then
 	echo $(basename $0)" can only accept source files, not header files; exiting..." >&2
 	exit 1
     else
@@ -264,8 +264,31 @@ EOF
 fi
 
 
+function is_file_excluded() {
+    path_to_check=$1
+    filename=$2
+    if [[ "$path_to_check" == "/" ]]; then
+        return 0
+    fi
+
+    if [[ -f $path_to_check/.clang_tidy_exclude ]]; then
+        relpath=$(realpath --relative-to=$path_to_check $filename)
+        if grep -q "^$relpath$" $path_to_check/.clang_tidy_exclude; then
+            return 1
+        fi
+        return 0
+    else
+        is_file_excluded $(dirname $path_to_check) $filename
+        return $?
+    fi
+}
 
 for source_file in $source_files; do
+    is_file_excluded $(dirname $source_file) $source_file
+    if [ $? -eq 1 ]; then
+        #echo "Skipping excluded source file: $source_file"
+        continue
+    fi
 
     clang-tidy -extra-arg=-ferror-limit=0 -p=$tmpdir -checks=${musts},${maybes} -config="{CheckOptions: [{key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes, value: unsigned;size_t;ptrdiff_t;size_type;difference_type}]}" -header-filter=.* $source_file |& awk -f $(dirname $0)/duneclang-tidy_scrub_output.awk
 

@@ -1185,8 +1185,8 @@ def _RestoreFilters():
 class _FunctionState(object):
   """Tracks current function name and the number of lines in its body."""
 
-  _NORMAL_TRIGGER = 40  # for --v=0, 80 for --v=1, etc.
-  _TEST_TRIGGER = 60    # about 50% more than _NORMAL_TRIGGER.
+  _NORMAL_TRIGGER = 50  # for --v=0, 80 for --v=1, etc.
+  _TEST_TRIGGER = 75    # about 50% more than _NORMAL_TRIGGER.
 
   def __init__(self):
     self.in_a_function = False
@@ -2929,14 +2929,16 @@ def CheckForNonStandardConstructs(filename, clean_lines, linenum,
 
   for output_token in ["printf", "cout", "cerr"]:
     if Search(r'[\s:]%s[ .<(]' % (output_token), line):
-      error(filename, linenum, 'runtime/output_format', 3,
+      with open(filename) as inf:
+        if not Search(r"int\s+main", inf.read()):
+          error(filename, linenum, 'runtime/output_format', 3,
             '\"%s\" should not be used for output in artdaq software.' % (output_token))
 
   # Remove escaped backslashes before looking for undefined escapes.
   line = line.replace('\\\\', '')
 
   if Search(r'^\s*#define\s+\S+\s+\S+', line):
-    if not "TRACE_" in line:
+    if not "TRACE_" in line and not "TLVL_" in line:
       error(filename, linenum, 'build/define_used', 3,
             '#define appears to be used. Macros should generally be avoided if there\'s an alternative to them.')
 
@@ -5362,7 +5364,7 @@ def CheckCasts(filename, clean_lines, linenum, error):
                     r'\((\w+\s?\*+\s?)\)', error)
 
   if "reinterpret_cast" in line:
-    error(filename, linenum, 'runtime/castint', 4,
+    error(filename, linenum, 'runtime/casting', 4,
           ('Use of reinterpret_cast can be dangerous. If there\'s no way to avoid its use '
            'add \" // NOLINT\" to the end of this line so this script will ignore it next time'))
 
@@ -5923,11 +5925,10 @@ def CheckItemIndentationInNamespace(filename, raw_lines_no_comments, linenum,
 
 def CheckForCStyleComments(filename, lines, error):
   for i_l in range(len(lines)):
-    if Search(r'^/\*[^\*]', lines[i_l]) or Search(r'\s+/\*[^\*]', lines[i_l]) or \
-       Search(r'^/\*$', lines[i_l]) or Search(r'\s+/\*$', lines[i_l]):
+    if Search(r'^/\*[^\*]', lines[i_l]) or Search(r'\s+/\*[^\*]', lines[i_l]):
       if not Search(r'.*/\*.*\*/\s*[\),]', lines[i_l]):
         error(filename, i_l, 'readability/comment', 3,
-              'C-style comment syntax detected; please use either C++ style "//" or Doxygen style')
+              'C-style comment syntax detected; please use either C++ style "//" or Doxygen style. Multi-line comments should start with the C-style syntax on a line by itself')
 
 def ProcessLine(filename, file_extension, clean_lines, line,
                 include_state, function_state, nesting_state, error,
