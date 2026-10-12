@@ -32,6 +32,10 @@ BEGIN {
     if ($0 ~ /TLOG/) {
        next
     }
+    # Don't complain about TLVL_** defines
+    if ($0 ~ /TLVL_/) {
+       next
+    }
 
     # Get rid of complainst about BOOST expansions
     if ($0 ~ /Calling.*test_method/) {
@@ -122,7 +126,7 @@ BEGIN {
     # variable); this strikes me as easier for both the programmer and
     # the reader than the lambda function clang-tidy recommends
 
-    if ($0 ~ /\[modernize-avoid-bind\].*,[[:space:]]*this[[:space:]]*,/ ) {
+    if ($0 ~ /\[modernize-avoid-bind\].*,[[:space:]]*this[[:space:]]*(?:,|\))/ ) {
 	next
     }
 

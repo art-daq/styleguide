@@ -2938,7 +2938,7 @@ def CheckForNonStandardConstructs(filename, clean_lines, linenum,
   line = line.replace('\\\\', '')
 
   if Search(r'^\s*#define\s+\S+\s+\S+', line):
-    if not "TRACE_" in line and not "TLVL_" in line:
+    if not "TRACE_" in line and not "TLVL_" in line and not "BOOST_TEST" in line:
       error(filename, linenum, 'build/define_used', 3,
             '#define appears to be used. Macros should generally be avoided if there\'s an alternative to them.')
 
