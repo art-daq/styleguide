@@ -106,6 +106,10 @@ BEGIN {
 	next
     }
 
+    if ($0 ~ /compiler\/gcc\/compilerSpecific\.h is not for use with the clang compiler/) { # Ignore issue from cadef.h
+    next
+    }
+
     # Catch instances of external header errors where the awk record includes the opening blurb
 
     if ($0 ~ /Error while processing/ && $0 ~ /\/cvmfs/) {
