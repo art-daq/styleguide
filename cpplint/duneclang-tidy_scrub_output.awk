@@ -12,13 +12,13 @@ BEGIN {
 
 {
     # Ignore complaints about MsgPack deserializer memory allocation
-    if($0 ~ /\/cvmfs\/dunedaq.*opensciencegrid.org.*msgpack/) {
+    if($0 ~ /\/cvmfs\/fermilab.*opensciencegrid.org.*msgpack/) {
         in_serialization_lint = 1
         next
     }
 
     # Get rid of complaints about external headers
-    if ($0 ~ /\n[[:space:]~]*\/cvmfs\/dunedaq.*opensciencegrid.org.*/) {
+    if ($0 ~ /\n[[:space:]~]*\/cvmfs\/fermilab.*opensciencegrid.org.*/) {
        next
     }
 
