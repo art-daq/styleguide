@@ -95,15 +95,102 @@ fi
 files=$( echo $files | tr " " "\n" | sort | tr "\n" " " )
 DIR="$(dirname "$(readlink -f "$0")")"
 
+max_jobs=${DUNE_STYLE_CHECK_JOBS:-$(nproc 2>/dev/null || echo 4)}
+if [[ ! "$max_jobs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "DUNE_STYLE_CHECK_JOBS must be a positive integer; got \"$max_jobs\"" >&2
+    exit 1
+fi
+outdir=$(mktemp -d)
+trap 'rm -rf "$outdir"' EXIT
+
+check_file() {
+    local file=$1 out=$2
+    {
+        $DIR/dunecpplint.sh $file
+
+        if [[ "$file" =~ .*cc$ || "$file" =~ .*cpp$ ]]; then
+            $DIR/duneclang-tidy.sh $compile_commands_dir $file
+        fi
+    } > "$out" 2>&1
+}
+
+# Files that produced no output are recorded, with their modification time, in
+# a cache file next to compile_commands.json so unchanged files are skipped on
+# later runs. Delete the file to force a full re-check.
+passed_file=$compile_commands_dir/dune-cpp-style-check.passed
+declare -A passed
+if [[ -f $passed_file ]]; then
+    while read -r mtime cached; do
+        passed[$cached]=$mtime
+    done < "$passed_file"
+fi
+
+to_check=""
 for file in $files ; do
-
-     $DIR/dunecpplint.sh $file
-
-     if [[ "$file" =~ .*cc$ || "$file" =~ .*cpp$ ]]; then
-	 $DIR/duneclang-tidy.sh $compile_commands_dir $file
-     fi
-
+    key=$(readlink -f $file)
+    if [[ "${passed[$key]}" != "$(stat -c %Y $file)" ]]; then
+        to_check="$to_check $file"
+    fi
 done
+skipped=$(( $(echo $files | wc -w) - $(echo $to_check | wc -w) ))
+files=$to_check
+
+# Each file's output goes to its own buffer so it can be printed collated,
+# in sorted file order, once all jobs are done
+total=0
+for file in $files ; do
+    total=$((total + 1))
+done
+
+processed=0
+report_progress() {
+    local remaining=$((total - processed))
+    if [[ -t 2 ]]; then
+        printf '\rProcessed %d of %d files; %d remaining' "$processed" "$total" "$remaining" >&2
+    else
+        printf 'Processed %d of %d files; %d remaining\n' "$processed" "$total" "$remaining" >&2
+    fi
+}
+
+i=0
+for file in $files ; do
+    check_file $file "$outdir/$i.out" &
+    i=$((i + 1))
+    while (( $(jobs -rp | wc -l) >= max_jobs )); do
+        wait -n || true
+        processed=$((processed + 1))
+        report_progress
+    done
+done
+while (( $(jobs -rp | wc -l) > 0 )); do
+    wait -n || true
+    processed=$((processed + 1))
+    report_progress
+done
+
+if [[ -t 2 ]]; then
+    printf '\r\033[K' >&2
+fi
+
+i=0
+for file in $files ; do
+    key=$(readlink -f $file)
+    if [[ -s "$outdir/$i.out" ]]; then
+        cat "$outdir/$i.out"
+        unset "passed[$key]"
+    else
+        passed[$key]=$(stat -c %Y $file)
+    fi
+    i=$((i + 1))
+done
+
+for key in "${!passed[@]}"; do
+    echo "${passed[$key]} $key"
+done | sort -k2 > "$passed_file" 2>/dev/null
+
+if (( skipped > 0 )); then
+    echo "Skipped $skipped previously passed unchanged file(s); see $passed_file" >&2
+fi
 
 
 exit 0

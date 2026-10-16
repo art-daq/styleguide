@@ -2,36 +2,29 @@ BEGIN {
 
     RS="^"
 
-    in_ers_lint=0
     in_boost_lint=0
-    in_serialization_lint=0
 
     work_area_dir=ENVIRON["DBT_AREA_ROOT"]
 }
 
 
 {
-    # Ignore complaints about MsgPack deserializer memory allocation
-    if($0 ~ /\/cvmfs\/fermilab.*opensciencegrid.org.*msgpack/) {
-        in_serialization_lint = 1
+    # Get rid of complaints about external headers
+    if ($0 ~ /\n[[:space:]~]*\/cvmfs\/.*opensciencegrid.org/) {
+       next
+    }
+    if ($0 ~ /\n[[:space:]~]*\/.*\/spack\/opt\/spack\//) {
+       next
+    }
+    if ($0 ~ /\n[[:space:]~]*\/.*\/\.spack-env\/view\//) {
+       next
+    }
+
+    # Ignore default implementation messages
+    if ($0 ~ /warning: Using default implementation of/) {
         next
     }
 
-    # Get rid of complaints about external headers
-    if ($0 ~ /\n[[:space:]~]*\/cvmfs\/fermilab.*opensciencegrid.org.*/) {
-       next
-    }
-
-
-    # Get rid of complaints about moo-generated code
-    if ($0 ~/\/codegen\//) {
-       next
-    }
-
-    # Get rid of complaints about TLOG expansions
-    if ($0 ~ /TLOG/) {
-       next
-    }
     # Don't complain about TLVL_** defines
     if ($0 ~ /TLVL_/) {
        next
@@ -49,48 +42,14 @@ BEGIN {
         }
     }
     in_boost_lint = 0
-    in_serialization_lint = 0
 
     # Also ignore bad things that happen in exception tests
     if ($0 ~ /BOOST_.*_EXCEPTION/) {
         next
     }
 
-    # Get rid of spurious (and lengthy) complaint about template
-    # parameters in iomanager's FollyQueue.hpp as well as other
-    # spurious folly complaints (FollyMPMCQueue not existing, e.g.)
-
-    if ($0 ~ /Folly.*Queue/) {
-	next
-    }
-
-    # Get rid of complaints about ERS expansions
-    if ($0 ~ /ERS_/) {
-	#printf("\nMatched ERS_, setting in_ers_lint to 1")
-	in_ers_lint = 1
-        next
-    }
-
-    # Usually an expanded ERS macro has several warnings and
-    # errors. They include expansions from /cvmfs-located headers, as
-    # well as complaints about copy-by-values in expressions like
-    # "((std::string)connection_name)((std::string)message))". We
-    # don't need or want them cluttering up the linting output
-
-    if (in_ers_lint == 1) {
-	if ($0 ~ /xpanded from here/ || $0 ~ /\(\(.*\).*\)/) {
-	    next
-	}
-    }
-
-    in_ers_lint = 0
-
     # Users don't need to know about low-level clang-tidy details
     if ($0 ~ /Use -system-headers to display errors from system headers as well/) {
-	next
-    }
-
-    if ($0 ~ /DEFINE_DUNE_DAQ_MODULE/) {
 	next
     }
 
@@ -116,21 +75,15 @@ BEGIN {
 	next
     }
 
-    # JCF, May-27-2022: there's a phenomenon where two warnings will appear in the same record, and the first is actually
-    # the last (unwanted) performance-unnecessary-value-param warning at the end of an ERS line
-
-    if ($0 ~ /\[performance-unnecessary-value-param\].*\[[[:alnum:]-]+\]/) {
-	match($0, /\[performance-unnecessary-value-param\].*\n/)
-	printf("\n%s", substr($0, RSTART+RLENGTH))
-	next
-    }
-
     # JCF, May-27-2022: a frequent idiom is to use bind to register a
     # member function as a callback (with "this" as the bound
     # variable); this strikes me as easier for both the programmer and
     # the reader than the lambda function clang-tidy recommends
 
     if ($0 ~ /\[modernize-avoid-bind\].*,[[:space:]]*this[[:space:]]*(?:,|\))/ ) {
+	next
+    }
+    if ($0 ~ /\[modernize-avoid-bind\].*boost::thread/ ) {
 	next
     }
 
