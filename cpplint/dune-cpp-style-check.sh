@@ -146,9 +146,9 @@ processed=0
 report_progress() {
     local remaining=$((total - processed))
     if [[ -t 2 ]]; then
-        printf '\rProcessed %d of %d files; %d remaining' "$processed" "$total" "$remaining" >&2
+        printf '\r%s: Processed %d of %d files; %d remaining' "$filename" "$processed" "$total" "$remaining" >&2
     else
-        printf 'Processed %d of %d files; %d remaining\n' "$processed" "$total" "$remaining" >&2
+        printf '%s: Processed %d of %d files; %d remaining\n' "$filename" "$processed" "$total" "$remaining" >&2
     fi
 }
 
@@ -189,7 +189,7 @@ for key in "${!passed[@]}"; do
 done | sort -k2 > "$passed_file" 2>/dev/null
 
 if (( skipped > 0 )); then
-    echo "Skipped $skipped previously passed unchanged file(s); see $passed_file" >&2
+    echo "$filename: Skipped $skipped previously passed unchanged file(s); see $passed_file" >&2
 fi
 
 
